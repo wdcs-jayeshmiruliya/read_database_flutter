@@ -82,8 +82,8 @@ class _HomePageState extends State<HomePage> {
         return;
       }
 
-      _db.open(file.path);
-      final tables = _db.listTables();
+      await _db.open(file.path);
+      final tables = await _db.listTables();
       setState(() {
         _tables = tables;
         _selectedTable = tables.isNotEmpty ? tables.first : null;
@@ -105,10 +105,10 @@ class _HomePageState extends State<HomePage> {
       _error = null;
     });
     try {
-      final cols = _db.getColumnNames(table);
-      final total = _db.getRowCount(table);
+      final cols = await _db.getColumnNames(table);
+      final total = await _db.getRowCount(table);
       _currentPage = 0;
-      final rows = _db.getRows(table, limit: _pageSize, offset: 0);
+      final rows = await _db.getRows(table, limit: _pageSize, offset: 0);
       setState(() {
         _columns = cols;
         _totalCount = total;
@@ -140,7 +140,7 @@ class _HomePageState extends State<HomePage> {
     if (_selectedTable == null) return;
     setState(() => _loading = true);
     try {
-      final rows = _db.getRows(
+      final rows = await _db.getRows(
         _selectedTable!,
         limit: _pageSize,
         offset: page * _pageSize,
@@ -192,8 +192,8 @@ class _HomePageState extends State<HomePage> {
           final filePath = detail.files.firstOrNull?.path;
           if (filePath == null) return;
           try {
-            _db.open(filePath);
-            final tables = _db.listTables();
+            await _db.open(filePath);
+            final tables = await _db.listTables();
             setState(() {
               _tables = tables;
               _selectedTable = tables.isNotEmpty ? tables.first : null;
@@ -204,6 +204,7 @@ class _HomePageState extends State<HomePage> {
           } catch (e) {
             setState(() => _error = e.toString());
             _showSnack('Failed to open database: $e');
+            debugPrint('Failed to open database: $e');
           }
         },
         child: Column(
