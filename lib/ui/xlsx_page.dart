@@ -35,7 +35,7 @@ class _XlsxPageState extends State<XlsxPage> {
   String? _error;
   // Header row controller (1-based UX)
   final TextEditingController _headerRowController = TextEditingController();
-  
+
   // File watcher for auto-refresh
   FileWatcher? _fileWatcher;
   StreamSubscription? _fileWatcherSubscription;
@@ -46,7 +46,9 @@ class _XlsxPageState extends State<XlsxPage> {
       _error = null;
     });
     try {
-      try { await windowManager.focus(); } catch (_) {}
+      try {
+        await windowManager.focus();
+      } catch (_) {}
       await Future.delayed(const Duration(milliseconds: 100));
 
       const typeGroup = XTypeGroup(label: 'Excel', extensions: ['xlsx']);
@@ -55,10 +57,10 @@ class _XlsxPageState extends State<XlsxPage> {
       if (file == null) return;
 
       final picked = file; // promote to non-null for closures
-      
+
       // Stop previous watcher if exists
       await _stopFileWatcher();
-      
+
       final bytes = await picked.readAsBytes();
       final excel = Excel.decodeBytes(bytes);
       final names = excel.tables.keys.toList();
@@ -115,7 +117,10 @@ class _XlsxPageState extends State<XlsxPage> {
         headerIndex = manualOneBased - 1;
       } else {
         int idx = 0;
-        while (idx < rawRows.length && rawRows[idx].every((c) => (c?.value?.toString().trim().isEmpty ?? true))) {
+        while (idx < rawRows.length &&
+            rawRows[idx].every(
+              (c) => (c?.value?.toString().trim().isEmpty ?? true),
+            )) {
           idx++;
         }
         headerIndex = idx;
@@ -129,7 +134,9 @@ class _XlsxPageState extends State<XlsxPage> {
           _rows = const [];
           _currentPage = 0;
         });
-        _showSnack('Header row ${manualOneBased ?? (headerIndex + 1)} is out of range for sheet "$sheetName"');
+        _showSnack(
+          'Header row ${manualOneBased ?? (headerIndex + 1)} is out of range for sheet "$sheetName"',
+        );
         return;
       }
       final headerCells = rawRows[headerIndex];
@@ -149,7 +156,8 @@ class _XlsxPageState extends State<XlsxPage> {
         for (int j = 0; j < headers.length; j++) {
           final key = headers[j].isEmpty ? 'Column ${j + 1}' : headers[j];
           final cell = j < row.length ? row[j] : null;
-          map[key] = cell?.value; // DataTableView will stringify via DatabaseService.formatCellValue
+          map[key] = cell
+              ?.value; // DataTableView will stringify via DatabaseService.formatCellValue
         }
         dataRows.add(map);
       }
@@ -187,13 +195,14 @@ class _XlsxPageState extends State<XlsxPage> {
   Future<void> _startFileWatcher(String filePath) async {
     try {
       await _stopFileWatcher();
-      
+
       final file = File(filePath);
       if (!await file.exists()) return;
-      
+
       _fileWatcher = FileWatcher(filePath);
       _fileWatcherSubscription = _fileWatcher!.events.listen(
         (event) async {
+          debugPrint('File watcher event: ${event.type}');
           // Only react to modify events (file content changes)
           if (event.type == ChangeType.MODIFY && !_isRefreshing) {
             await _refreshFromFile();
@@ -216,28 +225,28 @@ class _XlsxPageState extends State<XlsxPage> {
 
   Future<void> _refreshFromFile() async {
     if (_filePath == null || _isRefreshing) return;
-    
+
     _isRefreshing = true;
-    
+
     try {
       // Stop watcher temporarily to prevent multiple simultaneous refreshes
       await _stopFileWatcher();
-      
+
       final file = File(_filePath!);
       if (!await file.exists()) {
         _showSnack('File no longer exists');
         _isRefreshing = false;
         return;
       }
-      
+
       // Try to read the file
       final bytes = await file.readAsBytes();
       final excel = Excel.decodeBytes(bytes);
       final names = excel.tables.keys.toList();
-      
+
       // Preserve current sheet and header row settings
       final currentSheet = _selectedSheet;
-      
+
       setState(() {
         _workbook = excel;
         _sheetNames = names;
@@ -250,18 +259,18 @@ class _XlsxPageState extends State<XlsxPage> {
           _selectedSheet = null;
         }
       });
-      
+
       // Reload current sheet data
       if (_selectedSheet != null) {
         await _loadSheet(_selectedSheet!);
       }
-      
+
       // Restart watcher
       await _startFileWatcher(_filePath!);
     } catch (e) {
       debugPrint('Failed to refresh from file: $e');
       // If file is locked or cannot be read, show error
-      if (e.toString().contains('locked') || 
+      if (e.toString().contains('locked') ||
           e.toString().contains('access') ||
           e.toString().contains('permission')) {
         _showSnack('File is locked by another application');
@@ -290,7 +299,11 @@ class _XlsxPageState extends State<XlsxPage> {
         title: Text(title),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12.0),
+            padding: const EdgeInsets.only(left: 12.0),
+            child: Center(child: Text(_filePath ?? '')),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: FilledButton.icon(
               onPressed: _pickXlsx,
               icon: const Icon(Icons.folder_open),
@@ -351,19 +364,24 @@ class _XlsxPageState extends State<XlsxPage> {
                     }
                   },
                   child: const Text('Apply'),
-                )
+                ),
               ],
             ),
           ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              child: Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ),
           if (_loading)
             const Expanded(child: Center(child: CircularProgressIndicator()))
           else if (_headers.isEmpty)
-            const Expanded(child: Center(child: Text('Open a .xlsx and select a sheet')))
+            const Expanded(
+              child: Center(child: Text('Open a .xlsx and select a sheet')),
+            )
           else
             Expanded(
               child: Padding(
@@ -391,5 +409,3 @@ class _XlsxPageState extends State<XlsxPage> {
     return _rows.sublist(start, end);
   }
 }
-
-
